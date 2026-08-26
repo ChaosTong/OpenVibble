@@ -455,5 +455,5 @@ final class BridgeAppModel: ObservableObject {
 }
 
 extension Notification.Name {
-    static let liveActivityDecisionReceived = Notification.Name("kingcos.me.openvibble.liveActivityDecisionReceived")
+    static let liveActivityDecisionReceived = Notification.Name("com.easyulife.openvibble.liveActivityDecisionReceived")
 }

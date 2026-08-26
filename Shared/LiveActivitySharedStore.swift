@@ -9,8 +9,8 @@ import Foundation
 /// record into the shared `UserDefaults`, then posts a Darwin notification so
 /// the main app picks it up without having to be foregrounded.
 enum LiveActivitySharedStore {
-    static let appGroup = "group.kingcos.me.openvibble"
-    static let decisionChangedDarwinName = "kingcos.me.openvibble.prompt.decisionChanged"
+    static let appGroup = "group.com.easyulife.openvibble"
+    static let decisionChangedDarwinName = "com.easyulife.openvibble.prompt.decisionChanged"
 
     enum Decision: String, Sendable {
         case approve

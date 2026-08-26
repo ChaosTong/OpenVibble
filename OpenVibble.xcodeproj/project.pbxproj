@@ -121,7 +121,7 @@
 		5F4F84865792A7D52BF73EDD /* SmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmokeTests.swift; sourceTree = "<group>"; };
 		5FFF5757CB966F2F1570C019 /* OpenVibbleAppTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = OpenVibbleAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		6D1CD2BA270744D1E216FCFA /* TerminalStyleLite.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalStyleLite.swift; sourceTree = "<group>"; };
-		6F785828031A298D5AA52F35 /* OpenVibbleLiveActivity.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = OpenVibbleLiveActivity.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		6F785828031A298D5AA52F35 /* OpenVibbleLiveActivity.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = OpenVibbleLiveActivity.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		768D4B98611B5F094BCB41F0 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		77B3453FEFE9D00261494A6F /* OpenVibbleApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenVibbleApp.swift; sourceTree = "<group>"; };
 		7AA1CBCBA3072723280C1D62 /* BuddyLiveActivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BuddyLiveActivityManager.swift; sourceTree = "<group>"; };
@@ -136,7 +136,7 @@
 		AEE80BFE42253DF8A0777FC9 /* OpenVibbleKit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = OpenVibbleKit; path = Packages/OpenVibbleKit; sourceTree = SOURCE_ROOT; };
 		AF72CA7A3AC578E356AF0373 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		B1E56A25DAA306740E807AC9 /* CharacterInstaller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CharacterInstaller.swift; sourceTree = "<group>"; };
-		B56B396C1C7E39F53D657B11 /* OpenVibbleApp.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = OpenVibbleApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B56B396C1C7E39F53D657B11 /* OpenVibbleApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OpenVibbleApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B608CB8E5FA6634F488D0C81 /* OpenVibbleDesktop.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OpenVibbleDesktop.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B675ED379CED64D51EE4671A /* DeviceMenuOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceMenuOverlay.swift; sourceTree = "<group>"; };
 		B99022B5E05DD0DBD7335BEC /* MotionSensor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotionSensor.swift; sourceTree = "<group>"; };
@@ -487,8 +487,6 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
-				TargetAttributes = {
-				};
 			};
 			buildConfigurationList = BD41E83893AB248CFF4D3207 /* Build configuration list for PBXProject "OpenVibble" */;
 			developmentRegion = en;
@@ -703,6 +701,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = OpenVibbleLiveActivity/OpenVibbleLiveActivity.entitlements;
 				CURRENT_PROJECT_VERSION = 3;
+				DEVELOPMENT_TEAM = 9Y74876TPS;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = OpenVibbleLiveActivity/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
@@ -712,7 +711,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0.2;
-				PRODUCT_BUNDLE_IDENTIFIER = kingcos.me.openvibble.liveactivity;
+				PRODUCT_BUNDLE_IDENTIFIER = com.easyulife.openvibble.liveactivity;
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -725,6 +724,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = OpenVibbleLiveActivity/OpenVibbleLiveActivity.entitlements;
 				CURRENT_PROJECT_VERSION = 3;
+				DEVELOPMENT_TEAM = 9Y74876TPS;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = OpenVibbleLiveActivity/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
@@ -734,7 +734,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0.2;
-				PRODUCT_BUNDLE_IDENTIFIER = kingcos.me.openvibble.liveactivity;
+				PRODUCT_BUNDLE_IDENTIFIER = com.easyulife.openvibble.liveactivity;
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -782,12 +782,14 @@
 				CODE_SIGN_ENTITLEMENTS = OpenVibbleApp/OpenVibbleApp.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CURRENT_PROJECT_VERSION = 3;
+				DEVELOPMENT_TEAM = 9Y74876TPS;
 				INFOPLIST_FILE = OpenVibbleApp/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0.2;
+				PRODUCT_BUNDLE_IDENTIFIER = com.easyulife.openvibble;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -902,12 +904,14 @@
 				CODE_SIGN_ENTITLEMENTS = OpenVibbleApp/OpenVibbleApp.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CURRENT_PROJECT_VERSION = 3;
+				DEVELOPMENT_TEAM = 9Y74876TPS;
 				INFOPLIST_FILE = OpenVibbleApp/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0.2;
+				PRODUCT_BUNDLE_IDENTIFIER = com.easyulife.openvibble;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};

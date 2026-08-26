@@ -22,7 +22,7 @@
 	<array>
 		<dict>
 			<key>CFBundleURLName</key>
-			<string>kingcos.me.openvibble</string>
+			<string>com.easyulife.openvibble</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>openvibble</string>

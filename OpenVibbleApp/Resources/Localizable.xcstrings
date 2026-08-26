@@ -1,6 +1,9 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "!" : {
+
+    },
     "[!]" : {
 
     },
@@ -16,6 +19,9 @@
           }
         }
       }
+    },
+    "$ openvibble --help" : {
+
     },
     "$ openvibble --init" : {
 
@@ -817,6 +823,7 @@
       }
     },
     "home.advertising.help" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -833,6 +840,7 @@
       }
     },
     "home.advertising.restart" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -881,6 +889,7 @@
       }
     },
     "home.help.claudeCode.title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -913,6 +922,7 @@
       }
     },
     "home.help.rename.title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1939,6 +1949,7 @@
       }
     },
     "info.claude.project.status.idle" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1955,6 +1966,7 @@
       }
     },
     "info.claude.project.status.running" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1971,6 +1983,7 @@
       }
     },
     "info.claude.project.status.waiting" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {

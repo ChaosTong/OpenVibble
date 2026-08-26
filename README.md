@@ -92,6 +92,16 @@ OpenVibble Desktop is a macOS companion app that bridges OpenVibble to Claude Co
 2. Open the **Hooks** tab in OpenVibble Desktop and register the Claude Code hooks. This writes into `~/.claude/settings.json` and can be removed at any time.
 3. Connect your iOS or Android device. Claude Code session events — session start/stop, permission prompts, response completion, user messages — are forwarded to the buddy in real time.
 
+## Pair With Cursor (via cursor-hook)
+
+OpenVibble Desktop exposes a localhost HTTP bridge (`~/.claude/openvibble.port`). `tools/cursor-hook/` forwards Cursor agent hooks to that bridge, which relays state to your phone over BLE.
+
+1. Launch **OpenVibble Desktop** and connect your iPhone.
+2. Install Cursor hooks: `tools/cursor-hook/install.sh`
+3. Use Cursor Agent normally; shell/MCP permission gates can be approved or denied from the phone.
+
+See [tools/cursor-hook/README.md](./tools/cursor-hook/README.md).
+
 ## Contributing
 
 Issues and pull requests are welcome. Please include reproducible steps and environment details when reporting bugs.

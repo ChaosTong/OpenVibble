@@ -17,6 +17,9 @@ actor BuddyLiveActivityManager {
         hasPrompt: Bool,
         personaSlug: String,
         messagePreview: String?,
+        activityStatusLine: String?,
+        activityStatusSubline: String?,
+        activityStatusToolLine: String?,
         promptID: String?
     ) async {
         guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
@@ -28,6 +31,9 @@ actor BuddyLiveActivityManager {
             promptPending: hasPrompt,
             personaSlug: personaSlug,
             messagePreview: messagePreview,
+            activityStatusLine: activityStatusLine,
+            activityStatusSubline: activityStatusSubline,
+            activityStatusToolLine: activityStatusToolLine,
             promptID: promptID
         )
 
@@ -69,6 +75,9 @@ actor BuddyLiveActivityManager {
             promptPending: false,
             personaSlug: "sleep",
             messagePreview: nil,
+            activityStatusLine: nil,
+            activityStatusSubline: nil,
+            activityStatusToolLine: nil,
             promptID: nil
         )
         await activity.end(ActivityContent(state: final, staleDate: nil), dismissalPolicy: .immediate)

@@ -48,66 +48,68 @@ struct BuddyLiveActivityWidget: Widget {
 
     @ViewBuilder
     private func expandedLeading(state: BuddyLiveActivityAttributes.ContentState) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            HStack(spacing: 6) {
-                PersonaGlyph(slug: state.personaSlug, size: 16)
-                Text("live.title")
-                    .font(TerminalStyleLite.mono(11, weight: .semibold))
-                    .foregroundStyle(TerminalStyleLite.ink)
-                    .lineLimit(1)
-            }
-            Text(state.promptPending ? "live.header.prompt" : "live.header.status")
-                .font(TerminalStyleLite.mono(9))
-                .foregroundStyle(state.promptPending ? TerminalStyleLite.accent : TerminalStyleLite.good)
+        HStack(spacing: 6) {
+            PersonaGlyph(slug: state.personaSlug, size: 16)
+            Text("live.title")
+                .font(TerminalStyleLite.mono(11, weight: .semibold))
+                .foregroundStyle(TerminalStyleLite.ink)
                 .lineLimit(1)
-                .minimumScaleFactor(0.7)
         }
         .padding(.leading, 2)
     }
 
     @ViewBuilder
     private func expandedTrailing(state: BuddyLiveActivityAttributes.ContentState) -> some View {
-        VStack(alignment: .trailing, spacing: 2) {
-            HStack(spacing: 8) {
-                countChip(key: "live.label.running", value: state.running, color: TerminalStyleLite.good)
-                countChip(key: "live.label.waiting", value: state.waiting, color: TerminalStyleLite.ink)
-            }
-            Text(state.connection)
-                .font(TerminalStyleLite.mono(10))
-                .foregroundStyle(TerminalStyleLite.inkDim)
-                .lineLimit(1)
-                .minimumScaleFactor(0.6)
+        HStack(spacing: 8) {
+            countChip(key: "live.label.running", value: state.running, color: TerminalStyleLite.good)
+            countChip(key: "live.label.waiting", value: state.waiting, color: TerminalStyleLite.ink)
         }
         .padding(.trailing, 2)
     }
 
     @ViewBuilder
     private func expandedBottom(state: BuddyLiveActivityAttributes.ContentState) -> some View {
-        if state.promptPending {
-            HStack(alignment: .center, spacing: 8) {
-                Text(state.messagePreview ?? String(localized: "live.alert.body"))
-                    .font(TerminalStyleLite.mono(11))
-                    .foregroundStyle(TerminalStyleLite.ink)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.75)
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(alignment: .top, spacing: 8) {
+                LiveActivityStatusHeader.view(state: state, fontSize: 10)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
-                if let id = state.promptID, !id.isEmpty {
-                    HStack(spacing: 6) {
-                        Button(intent: ApprovePromptIntent(promptID: id)) {
-                            actionLabel(key: "live.action.approve", color: TerminalStyleLite.good)
-                        }
-                        .buttonStyle(.plain)
-                        Button(intent: DenyPromptIntent(promptID: id)) {
-                            actionLabel(key: "live.action.deny", color: TerminalStyleLite.bad)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                    .fixedSize()
-                }
+                Text(state.connection)
+                    .font(TerminalStyleLite.mono(10))
+                    .foregroundStyle(TerminalStyleLite.inkDim)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
             }
-            .padding(.horizontal, 2)
+
+            if state.promptPending {
+                HStack(alignment: .center, spacing: 8) {
+                    Text(state.messagePreview ?? String(localized: "live.alert.body"))
+                        .font(TerminalStyleLite.mono(11))
+                        .foregroundStyle(TerminalStyleLite.ink)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.75)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                    if let id = state.promptID, !id.isEmpty {
+                        HStack(spacing: 6) {
+                            Button(intent: ApprovePromptIntent(promptID: id)) {
+                                actionLabel(key: "live.action.approve", color: TerminalStyleLite.good)
+                            }
+                            .buttonStyle(.plain)
+                            Button(intent: DenyPromptIntent(promptID: id)) {
+                                actionLabel(key: "live.action.deny", color: TerminalStyleLite.bad)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        .fixedSize()
+                    }
+                }
+            } else {
+                LiveActivityStatusBody.view(state: state, fontSize: 11, toolSize: 10)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
+        .padding(.horizontal, 2)
     }
 
     // MARK: - Compact trailing
@@ -124,8 +126,6 @@ struct BuddyLiveActivityWidget: Widget {
                 .foregroundStyle(TerminalStyleLite.good)
         }
     }
-
-    // MARK: - Shared chrome
 
     private func countChip(key: LocalizedStringKey, value: Int, color: Color) -> some View {
         HStack(spacing: 3) {
@@ -155,6 +155,60 @@ struct BuddyLiveActivityWidget: Widget {
     }
 }
 
+// MARK: - Status header (shared by island + lock screen)
+
+private enum LiveActivityStatusHeader {
+    static func fallbackText(state: BuddyLiveActivityAttributes.ContentState) -> String {
+        if state.promptPending {
+            return String(localized: "live.header.prompt")
+        }
+        if let line = state.activityStatusLine?.trimmingCharacters(in: .whitespacesAndNewlines), !line.isEmpty {
+            return line
+        }
+        return String(localized: "live.header.status")
+    }
+
+    @ViewBuilder
+    static func view(state: BuddyLiveActivityAttributes.ContentState, fontSize: CGFloat) -> some View {
+        let color = state.promptPending ? TerminalStyleLite.accent : TerminalStyleLite.good
+        Text(fallbackText(state: state))
+            .font(TerminalStyleLite.mono(fontSize))
+            .foregroundStyle(color)
+            .lineLimit(1)
+            .minimumScaleFactor(0.75)
+    }
+}
+
+// MARK: - Status body (white text under green header)
+
+private enum LiveActivityStatusBody {
+    @ViewBuilder
+    static func view(state: BuddyLiveActivityAttributes.ContentState, fontSize: CGFloat, toolSize: CGFloat) -> some View {
+        let body = state.activityStatusSubline?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let tool = state.activityStatusToolLine?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if body.isEmpty && tool.isEmpty {
+            EmptyView()
+        } else {
+            VStack(alignment: .leading, spacing: 2) {
+                if !body.isEmpty {
+                    Text(body)
+                        .font(TerminalStyleLite.mono(fontSize))
+                        .foregroundStyle(TerminalStyleLite.ink)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.75)
+                }
+                if !tool.isEmpty {
+                    Text(tool)
+                        .font(TerminalStyleLite.mono(toolSize))
+                        .foregroundStyle(TerminalStyleLite.inkDim)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.75)
+                }
+            }
+        }
+    }
+}
+
 // MARK: - Lock screen
 
 private struct LockScreenLiveActivityView: View {
@@ -162,20 +216,15 @@ private struct LockScreenLiveActivityView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 6) {
-                Text(state.promptPending ? "live.header.prompt" : "live.header.status")
-                    .font(TerminalStyleLite.mono(11, weight: .semibold))
-                    .foregroundStyle(state.promptPending ? TerminalStyleLite.accent : TerminalStyleLite.good)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
-
-                Spacer(minLength: 8)
+            HStack(alignment: .top, spacing: 8) {
+                LiveActivityStatusHeader.view(state: state, fontSize: 11)
+                    .frame(maxWidth: .infinity, alignment: .leading)
 
                 Text(state.connection)
                     .font(TerminalStyleLite.mono(10))
                     .foregroundStyle(TerminalStyleLite.inkDim)
                     .lineLimit(1)
-                    .minimumScaleFactor(0.6)
+                    .fixedSize(horizontal: true, vertical: false)
             }
 
             HStack(spacing: 10) {
@@ -187,6 +236,10 @@ private struct LockScreenLiveActivityView: View {
                         .foregroundStyle(TerminalStyleLite.ink)
                         .lineLimit(2)
                         .minimumScaleFactor(0.8)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                } else if state.activityStatusSubline?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
+                            || state.activityStatusToolLine?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false {
+                    LiveActivityStatusBody.view(state: state, fontSize: 12, toolSize: 11)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 } else {
                     Text("live.title")

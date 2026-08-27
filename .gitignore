@@ -25,3 +25,7 @@ memory/
 # Python tooling caches (used only by helper scripts)
 .pytest_cache/
 __pycache__/
+
+# Node bridge (Cursor hook relay)
+tools/node-bridge/node_modules/
+tools/node-bridge/mac-ble-helper.app/

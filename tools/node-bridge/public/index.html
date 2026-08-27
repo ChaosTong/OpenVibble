@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OpenVibble Bridge</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0f1117;
+      --panel: #171a22;
+      --border: #2a3140;
+      --text: #e8ecf4;
+      --muted: #8b95a8;
+      --accent: #6ea8fe;
+      --ok: #3dd68c;
+      --warn: #f5a524;
+      --bad: #f87171;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    header h1 { margin: 0; font-size: 18px; font-weight: 600; }
+    .pill {
+      padding: 2px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      border: 1px solid var(--border);
+    }
+    .pill.ok { color: var(--ok); border-color: #1f5f42; background: #102419; }
+    .pill.bad { color: var(--bad); border-color: #5f2a2a; background: #241010; }
+    .pill.wait { color: var(--warn); border-color: #5f4a1f; background: #241c10; }
+    main {
+      padding: 16px 20px 40px;
+      display: grid;
+      gap: 14px;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      align-items: start;
+    }
+    section {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+    }
+    section h2 {
+      margin: 0 0 10px;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--muted);
+    }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+    .stat {
+      background: #11151d;
+      border-radius: 8px;
+      padding: 10px;
+      text-align: center;
+    }
+    .stat .n { font-size: 22px; font-weight: 700; }
+    .stat .l { font-size: 11px; color: var(--muted); }
+    .row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+    button, .btn {
+      appearance: none;
+      border: 1px solid var(--border);
+      background: #11151d;
+      color: var(--text);
+      border-radius: 8px;
+      padding: 7px 12px;
+      cursor: pointer;
+      font: inherit;
+    }
+    button:hover { border-color: var(--accent); }
+    button:disabled { opacity: 0.45; cursor: not-allowed; }
+    button.primary { background: #1a2740; border-color: #35507a; color: #cfe0ff; }
+    input, textarea {
+      width: 100%;
+      background: #11151d;
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 8px 10px;
+      font: inherit;
+    }
+    textarea { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; min-height: 72px; resize: vertical; }
+    .log {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 12px;
+      color: var(--muted);
+      max-height: 220px;
+      overflow: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .field { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+    .field input { flex: 1; }
+    .hint { font-size: 12px; color: var(--muted); margin: 0 0 8px; }
+    .full { grid-column: 1 / -1; }
+    .toast {
+      position: fixed;
+      right: 16px;
+      bottom: 16px;
+      background: #11151d;
+      border: 1px solid var(--border);
+      padding: 10px 14px;
+      border-radius: 8px;
+      opacity: 0;
+      transition: opacity 0.2s;
+      pointer-events: none;
+    }
+    .toast.show { opacity: 1; }
+    .dev-list { display: flex; flex-direction: column; gap: 6px; max-height: 240px; overflow: auto; }
+    .dev-row {
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      gap: 8px;
+      align-items: center;
+      padding: 8px 10px;
+      background: #11151d;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+    .dev-row.active { border-color: var(--accent); }
+    .dev-name { font-weight: 600; }
+    .dev-meta { font-size: 12px; color: var(--muted); font-family: ui-monospace, Menlo, monospace; }
+    .dev-rssi { font-size: 12px; color: var(--muted); min-width: 56px; text-align: right; }
+    .empty { color: var(--muted); font-size: 13px; padding: 8px 0; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>OpenVibble Node Bridge</h1>
+    <span id="blePill" class="pill wait">BLE …</span>
+    <span id="deviceName" class="pill">—</span>
+    <span class="pill">127.0.0.1:<span id="portLabel">__OVD_PORT__</span></span>
+  </header>
+
+  <main>
+    <section class="full">
+      <h2>蓝牙设备</h2>
+      <p class="hint">iPhone 打开 OpenVibble App 并保持前台；手动扫描时不会自动连接，点设备行或「连接」。</p>
+      <div class="field">
+        <input id="scanPrefix" placeholder="名称前缀过滤" value="Claude" />
+        <button id="btnScanStart" class="primary">开始扫描</button>
+        <button id="btnScanStop">停止</button>
+        <button id="btnDisconnect">断开</button>
+        <button id="btnAutoConnect">自动连接</button>
+      </div>
+      <div id="scanHint" class="hint">—</div>
+      <div id="deviceList" class="dev-list"><div class="empty">暂无设备，点击「开始扫描」</div></div>
+    </section>
+
+    <section>
+      <h2>会话</h2>
+      <div class="stats">
+        <div class="stat"><div class="n" id="sTotal">0</div><div class="l">Total</div></div>
+        <div class="stat"><div class="n" id="sRunning">0</div><div class="l">Running</div></div>
+        <div class="stat"><div class="n" id="sWaiting">0</div><div class="l">Waiting</div></div>
+      </div>
+    </section>
+
+    <section>
+      <h2>预设 Heartbeat</h2>
+      <p class="hint">推送到手机，测试桌宠状态动画（需 BLE 已连接）</p>
+      <div class="row">
+        <button data-preset="idle">Idle</button>
+        <button data-preset="busy">Busy</button>
+        <button data-preset="attention">Attention</button>
+        <button data-preset="done">Done</button>
+        <button data-preset="clearPrompt">Clear prompt</button>
+        <button data-preset="tokenUp">Token +50K</button>
+      </div>
+    </section>
+
+    <section>
+      <h2>BLE 命令</h2>
+      <div class="row">
+        <button data-cmd="status">Status</button>
+        <button data-cmd="time">Time sync</button>
+        <button data-cmd="unpair">Unpair</button>
+      </div>
+      <div class="field">
+        <input id="nameInput" placeholder="设备名" value="Claude-iOS" />
+        <button data-cmd="name">Set name</button>
+      </div>
+      <div class="field">
+        <input id="ownerInput" placeholder="主人名" value="Felix" />
+        <button data-cmd="owner">Set owner</button>
+      </div>
+    </section>
+
+    <section>
+      <h2>模拟 Hook</h2>
+      <p class="hint">不经过 Cursor，直接写入 bridge 状态并推手机</p>
+      <div class="row">
+        <button class="primary" id="simPrompt">Prompt (busy)</button>
+        <button id="simTool">PreToolUse</button>
+        <button id="simStop">Stop (done)</button>
+      </div>
+      <div class="field">
+        <input id="simTitle" placeholder="对话标题" value="Web 测试对话" />
+        <input id="simProject" placeholder="项目目录名" value="Birkin" style="max-width:120px" />
+      </div>
+    </section>
+
+    <section class="full">
+      <h2>Hook 日志</h2>
+      <div id="hookLog" class="log">—</div>
+    </section>
+
+    <section class="full">
+      <h2>Raw JSON → BLE</h2>
+      <textarea id="rawJson">{"cmd":"status"}</textarea>
+      <div class="row" style="margin-top:8px">
+        <button id="sendRaw">发送</button>
+      </div>
+    </section>
+
+    <section class="full">
+      <h2>Bridge 活动日志</h2>
+      <div class="row">
+        <button id="clearActivity">清空</button>
+        <button id="refreshNow">立即刷新</button>
+      </div>
+      <div id="activityLog" class="log">—</div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast"></div>
+
+  <script>
+    window.OVD = { token: '__OVD_TOKEN__', port: __OVD_PORT__ };
+
+    const $ = (id) => document.getElementById(id);
+    const toast = (msg) => {
+      const el = $('toast');
+      el.textContent = msg;
+      el.classList.add('show');
+      setTimeout(() => el.classList.remove('show'), 2200);
+    };
+
+    async function api(path, opts = {}) {
+      const headers = { ...(opts.headers || {}), 'X-OVD-Token': window.OVD.token };
+      if (opts.body) headers['Content-Type'] = 'application/json';
+      const res = await fetch(path, { ...opts, headers });
+      if (res.status === 204) return { ok: true };
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || res.statusText);
+      return data;
+    }
+
+    function renderStatus(s) {
+      const ble = s.ble || {};
+      const pill = $('blePill');
+      if (!ble.enabled) {
+        pill.textContent = 'BLE 关闭';
+        pill.className = 'pill bad';
+      } else if (ble.connected) {
+        pill.textContent = 'BLE 已连接';
+        pill.className = 'pill ok';
+      } else if (ble.scanning) {
+        pill.textContent = '扫描中…';
+        pill.className = 'pill wait';
+      } else if (ble.ready) {
+        pill.textContent = 'BLE 就绪';
+        pill.className = 'pill wait';
+      } else {
+        pill.textContent = 'BLE 启动中';
+        pill.className = 'pill wait';
+      }
+      $('deviceName').textContent = ble.deviceName || '未连接设备';
+      $('sTotal').textContent = s.sessions?.total ?? 0;
+      $('sRunning').textContent = s.sessions?.running ?? 0;
+      $('sWaiting').textContent = s.sessions?.waiting ?? 0;
+      $('hookLog').textContent = (s.entries || []).join('\n') || '—';
+      $('activityLog').textContent = (s.activity || []).join('\n') || '—';
+
+      const state = ble.bluetoothState || 'unknown';
+      const auto = ble.autoConnect ? '自动连接开' : '手动模式';
+      $('scanHint').textContent = `蓝牙: ${state} · ${auto} · 已发现 ${(ble.devices || []).length} 台`;
+      renderDevices(ble.devices || [], ble.deviceName, ble.connected, ble.connectedDeviceId);
+    }
+
+    function renderDevices(devices, connectedName, isConnected, connectedId) {
+      let list = Array.isArray(devices) ? [...devices] : [];
+      if (isConnected && connectedName && !list.some((d) => d.id === connectedId || d.name === connectedName)) {
+        list.unshift({
+          id: connectedId || 'connected',
+          name: connectedName,
+          rssi: list.find((d) => d.id === connectedId)?.rssi ?? 0,
+        });
+      }
+      const box = $('deviceList');
+      if (!list.length) {
+        box.innerHTML = '<div class="empty">暂无设备 — 确保手机 App 前台 + 蓝牙，然后点「开始扫描」</div>';
+        return;
+      }
+      box.innerHTML = '';
+      for (const d of list) {
+        const row = document.createElement('div');
+        const active = isConnected && connectedId && d.id === connectedId;
+        row.className = 'dev-row' + (active ? ' active' : '');
+        row.innerHTML = `
+          <div>
+            <div class="dev-name">${escapeHtml(d.name)}${active ? ' <span style="color:var(--ok);font-size:11px">已连接</span>' : ''}</div>
+            <div class="dev-meta">${escapeHtml(String(d.id || '').slice(0, 8))}${d.id ? '…' : ''}</div>
+          </div>
+          <div class="dev-rssi">${d.rssi} dBm</div>
+          <button ${active ? 'disabled' : ''}>连接</button>
+        `;
+        row.querySelector('button').addEventListener('click', (e) => {
+          e.stopPropagation();
+          connectDevice(d.id);
+        });
+        row.addEventListener('click', () => connectDevice(d.id));
+        box.appendChild(row);
+      }
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    async function connectDevice(id) {
+      try {
+        await api('/api/ble/connect', { method: 'POST', body: JSON.stringify({ id }) });
+        toast('正在连接…');
+        refresh();
+      } catch (e) { toast(e.message); }
+    }
+
+    $('btnScanStart').addEventListener('click', async () => {
+      const btn = $('btnScanStart');
+      btn.disabled = true;
+      try {
+        const r = await api('/api/ble/scan', {
+          method: 'POST',
+          body: JSON.stringify({ action: 'start', prefix: $('scanPrefix').value.trim() }),
+        });
+        if (!r.ok) {
+          const msg = r.error === 'ble_not_ready'
+            ? 'BLE 未就绪 — 等几秒或重启 daemon'
+            : (r.error || '扫描失败');
+          toast(msg);
+          return;
+        }
+        toast('扫描中…');
+        $('scanHint').textContent = '蓝牙: 扫描中…';
+        refresh();
+      } catch (e) { toast(e.message); }
+      finally { btn.disabled = false; }
+    });
+
+    $('btnScanStop').addEventListener('click', async () => {
+      try {
+        await api('/api/ble/scan', { method: 'POST', body: JSON.stringify({ action: 'stop' }) });
+        toast('扫描已停止');
+        refresh();
+      } catch (e) { toast(e.message); }
+    });
+
+    $('btnDisconnect').addEventListener('click', async () => {
+      try {
+        await api('/api/ble/disconnect', { method: 'POST', body: '{}' });
+        toast('已断开');
+        refresh();
+      } catch (e) { toast(e.message); }
+    });
+
+    $('btnAutoConnect').addEventListener('click', async () => {
+      try {
+        await api('/api/ble/auto-connect', { method: 'POST', body: JSON.stringify({ value: true }) });
+        toast('已恢复自动连接（hook 模式）');
+        refresh();
+      } catch (e) { toast(e.message); }
+    });
+
+    async function refresh() {
+      try {
+        const s = await fetch('/api/status').then(r => r.json());
+        renderStatus(s);
+      } catch (e) {
+        toast('刷新失败: ' + e.message);
+      }
+    }
+
+    document.querySelectorAll('[data-preset]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        try {
+          const r = await api('/api/ble/preset', {
+            method: 'POST',
+            body: JSON.stringify({ preset: btn.dataset.preset }),
+          });
+          toast(r.ok ? `preset ${btn.dataset.preset} ✓` : '发送失败（手机未连接？）');
+          refresh();
+        } catch (e) { toast(e.message); }
+      });
+    });
+
+    document.querySelectorAll('[data-cmd]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const cmd = btn.dataset.cmd;
+        const body = { command: cmd };
+        if (cmd === 'name') body.name = $('nameInput').value;
+        if (cmd === 'owner') body.name = $('ownerInput').value;
+        try {
+          const r = await api('/api/ble/command', { method: 'POST', body: JSON.stringify(body) });
+          toast(r.ok ? `cmd:${cmd} ✓` : '发送失败');
+          refresh();
+        } catch (e) { toast(e.message); }
+      });
+    });
+
+    $('simPrompt').addEventListener('click', () => sendHook('prompt', {
+      session_id: 'web-test',
+      cwd: '/tmp/' + $('simProject').value,
+      conversation_title: $('simTitle').value,
+      prompt: $('simTitle').value,
+    }));
+
+    $('simTool').addEventListener('click', () => sendHook('pretooluse', {
+      session_id: 'web-test',
+      cwd: '/tmp/' + $('simProject').value,
+      conversation_title: $('simTitle').value,
+      tool_name: 'Shell',
+      tool_detail: 'Shell ls -la',
+    }));
+
+    $('simStop').addEventListener('click', () => sendHook('stop', {
+      cwd: '/tmp/' + $('simProject').value,
+    }));
+
+    async function sendHook(path, body) {
+      try {
+        await api('/api/test/hook', {
+          method: 'POST',
+          body: JSON.stringify({ path, body }),
+        });
+        toast(`hook /${path} ✓`);
+        refresh();
+      } catch (e) { toast(e.message); }
+    }
+
+    $('sendRaw').addEventListener('click', async () => {
+      try {
+        const r = await api('/api/ble/raw', {
+          method: 'POST',
+          body: JSON.stringify({ line: $('rawJson').value.trim() }),
+        });
+        toast(r.ok ? 'raw ✓' : '发送失败');
+      } catch (e) { toast(e.message); }
+    });
+
+    $('clearActivity').addEventListener('click', async () => {
+      await api('/api/activity/clear', { method: 'POST', body: '{}' });
+      refresh();
+    });
+
+    $('refreshNow').addEventListener('click', refresh);
+
+    refresh();
+    setInterval(refresh, 2000);
+  </script>
+</body>
+</html>

@@ -12,16 +12,18 @@
 'use strict';
 
 const fs = require('fs');
-const { postBridge, sessionId, workspaceCwd, debugLog } = require('./lib');
+const { postBridge, sessionId, workspaceCwd, enrichBody, debugLog } = require('./lib');
 
+// Default off: only permission gates (cursor_hook_permission.js) push to the
+// phone. Set OVD_CURSOR_OBSERVE=1 to forward busy/log/celebrate events too.
+const OBSERVE = (process.env.OVD_CURSOR_OBSERVE || '0') === '1';
 const TIMEOUT_MS = Number(process.env.OVD_CURSOR_HOOK_TIMEOUT_MS || 500);
 
 function translate(ev) {
   const name = ev.hook_event_name || ev.event || '';
   const sid = sessionId(ev);
   const cwd = workspaceCwd(ev);
-  const base = { session_id: sid };
-  if (cwd) base.cwd = cwd;
+  const base = enrichBody(ev, { session_id: sid, ...(cwd ? { cwd } : {}) });
 
   switch (name) {
     case 'sessionStart':
@@ -39,8 +41,7 @@ function translate(ev) {
       };
     }
 
-    case 'afterAgentResponse':
-    case 'afterAgentThought':
+    // Only `stop` — `afterAgentResponse` also fires at turn end and would duplicate log lines.
     case 'stop':
       return { path: 'stop', body: base };
 
@@ -77,13 +78,40 @@ function translate(ev) {
 
     case 'beforeMCPExecution': {
       const tool = ev.tool || ev.tool_name || ev.method || 'mcp';
-      const desc = ev.description || ev.summary || '';
+      const desc = ev.description || ev.summary || ev.mcp_server_name || '';
       return {
         path: 'pretooluse',
         body: {
           ...base,
           tool_name: `mcp:${String(tool).slice(0, 40)}`,
           tool_input: { description: String(desc).slice(0, 120) },
+        },
+      };
+    }
+
+    case 'preToolUse': {
+      const tool = String(ev.tool_name || 'tool').slice(0, 40);
+      const ti = ev.tool_input || {};
+      let hint =
+        ti.path ||
+        ti.file_path ||
+        ti.command ||
+        ti.description ||
+        (typeof ti === 'object' ? JSON.stringify(ti).slice(0, 120) : '');
+      const lower = tool.toLowerCase();
+      if (lower === 'calldynamictool' || lower === 'getdynamictool' || lower === 'fetchmcpresource') {
+        const ns = ti.namespace || ti.server || '';
+        const tn = ti.toolName || ti.tool_name || ti.uri || '';
+        hint = [ns, tn].filter(Boolean).join('/') || hint;
+      }
+      const detail = hint ? `${tool.toLowerCase()} ${String(hint).slice(0, 160)}` : tool.toLowerCase();
+      return {
+        path: 'pretooluse',
+        body: {
+          ...base,
+          tool_name: tool.toLowerCase(),
+          tool_detail: detail.trim(),
+          tool_input: { command: String(hint).slice(0, 200) },
         },
       };
     }
@@ -130,6 +158,8 @@ function translate(ev) {
 }
 
 async function main() {
+  if (!OBSERVE) process.exit(0);
+
   let raw;
   try {
     raw = fs.readFileSync(0, 'utf8');

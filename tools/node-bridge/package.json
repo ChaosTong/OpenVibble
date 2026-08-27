@@ -1,0 +1,17 @@
+{
+  "name": "openvibble-node-bridge",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Node daemon: Cursor/Claude hooks → localhost HTTP → BLE → OpenVibble phone",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "install-daemon": "./install.sh"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "optionalDependencies": {
+    "@abandonware/noble": "^1.9.2-26"
+  }
+}

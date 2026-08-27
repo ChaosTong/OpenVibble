@@ -363,6 +363,7 @@ final class BridgeAppModel: ObservableObject {
         let snap = snapshot
         let hasPrompt = prompt != nil
         let promptID = prompt?.id
+        let statusLines = hasPrompt ? nil : latestEntryStatusLines()
         Task {
             await liveActivityManager.startOrUpdate(
                 state: state,
@@ -370,6 +371,9 @@ final class BridgeAppModel: ObservableObject {
                 hasPrompt: hasPrompt,
                 personaSlug: slug,
                 messagePreview: preview,
+                activityStatusLine: statusLines?.primary,
+                activityStatusSubline: statusLines?.secondary,
+                activityStatusToolLine: statusLines?.tool,
                 promptID: promptID
             )
         }
@@ -394,6 +398,12 @@ final class BridgeAppModel: ObservableObject {
         if tool.isEmpty { return hint }
         if hint.isEmpty { return tool }
         return "\(tool): \(hint)"
+    }
+
+    /// Hook summary for Live Activity — `[project]` suffix may truncate; tool detail after ` · ` goes subline.
+    private func latestEntryStatusLines() -> LiveActivityStatusLines? {
+        guard let raw = parsedEntries.first else { return nil }
+        return LiveActivityStatusFormatter.format(raw: raw)
     }
 
     private func enableBatteryMonitoring() {

@@ -467,9 +467,13 @@ final class AppState: ObservableObject {
             case .permissionRequest:
                 let payload = (try? JSONDecoder().decode(PreToolUsePayload.self, from: body)) ?? PreToolUsePayload.empty
                 let id = UUID()
+                // Push to phone before the HTTP handler blocks waiting for a decision.
+                let sem = DispatchSemaphore(value: 0)
                 Task { @MainActor [weak self] in
                     self?.pushPending(id: id, payload: payload)
+                    sem.signal()
                 }
+                _ = sem.wait(timeout: .now() + 2)
                 return .pendingApproval(id: id, payload: payload)
             default:
                 Task { @MainActor [weak self] in
@@ -569,7 +573,9 @@ final class AppState: ObservableObject {
             prompt: promptInfo,
             completed: false
         )
-        _ = central.sendEncodable(snapshot)
+        if !central.sendEncodable(snapshot) {
+            appendLog("[hook] BLE prompt push failed — connect OpenVibble on phone")
+        }
     }
 
     private static func promptInfo(from pending: PendingApprovalState?) -> HeartbeatPrompt? {
@@ -583,14 +589,33 @@ final class AppState: ObservableObject {
     private func recordFireAndForget(event: HookEvent, body: Data) {
         let projectName = Self.extractCwd(from: body).flatMap { HookEvent.projectName(fromCwd: $0) }
         let sessionId = Self.extractSessionId(from: body)
+        let title = Self.extractConversationTitle(from: body)
+        let toolName = Self.extractToolDetail(from: body)
         updateSessions(event: event, sessionId: sessionId)
         hookActivity.append(HookActivityEntry(event: event, projectName: projectName))
-        appendLog("[hook] \(event.rawValue) [\(projectName ?? "?")]")
-        appendHookLine(event: event, projectName: projectName, toolName: nil)
+        appendLog("[hook] \(event.rawValue) [\(projectName ?? "?")]\(title.map { " \($0)" } ?? "")")
+        appendHookLine(
+            event: event,
+            projectName: projectName,
+            toolName: toolName,
+            conversationTitle: title
+        )
         pushHookSnapshotToPeripheral(event: event)
     }
 
     private func updateSessions(event: HookEvent, sessionId: String?) {
+        switch event {
+        case .stop, .stopFailure:
+            // Cursor stop hooks often omit session_id (hook falls back to
+            // "cursor"), so the id that went running on UserPromptSubmit is
+            // missed — clear every running session on turn end.
+            for key in sessions.keys where sessions[key] == .running {
+                sessions[key] = .idle
+            }
+            return
+        default:
+            break
+        }
         guard let sid = sessionId, !sid.isEmpty else { return }
         switch event {
         case .sessionStart:
@@ -600,13 +625,15 @@ final class AppState: ObservableObject {
             if sessions[sid] == nil { sessions[sid] = .idle }
         case .userPromptSubmit, .subagentStart:
             sessions[sid] = .running
-        case .stop, .stopFailure, .subagentStop:
+        case .subagentStop:
             // Turn finished — session goes back to idle. Keep the entry so
             // `total` still counts it; SessionEnd is what removes it.
             if sessions[sid] != nil { sessions[sid] = .idle }
         case .sessionEnd:
             sessions.removeValue(forKey: sid)
         case .preToolUse, .notification, .permissionRequest:
+            break
+        default:
             break
         }
     }
@@ -615,11 +642,23 @@ final class AppState: ObservableObject {
     /// and trims to the cap. iOS parses the leading "HH:mm:ss" token as the
     /// time column and the rest as the message — same format as the embedded
     /// device already uses on its own heartbeat entries.
-    private func appendHookLine(event: HookEvent, projectName: String?, toolName: String?) {
+    private func appendHookLine(
+        event: HookEvent,
+        projectName: String?,
+        toolName: String?,
+        conversationTitle: String? = nil
+    ) {
         let stamp = DateFormatter.logStamp.string(from: Date())
         var line = "\(stamp) \(event.rawValue)"
         if let project = projectName { line += " [\(project)]" }
-        if let tool = toolName { line += " \(tool)" }
+        var detailParts: [String] = []
+        if let title = conversationTitle?.trimmingCharacters(in: .whitespacesAndNewlines), !title.isEmpty {
+            detailParts.append(title)
+        }
+        if let tool = toolName?.trimmingCharacters(in: .whitespacesAndNewlines), !tool.isEmpty {
+            detailParts.append(tool)
+        }
+        if !detailParts.isEmpty { line += " " + detailParts.joined(separator: " · ") }
         recentHookLines.insert(line, at: 0)
         if recentHookLines.count > Self.recentHookLinesCap {
             recentHookLines.removeLast(recentHookLines.count - Self.recentHookLinesCap)
@@ -672,6 +711,45 @@ final class AppState: ObservableObject {
     private static func extractSessionId(from body: Data) -> String? {
         guard let obj = try? JSONSerialization.jsonObject(with: body) as? [String: Any] else { return nil }
         return obj["session_id"] as? String
+    }
+
+    private static func extractConversationTitle(from body: Data) -> String? {
+        guard let obj = try? JSONSerialization.jsonObject(with: body) as? [String: Any] else { return nil }
+        if let title = obj["conversation_title"] as? String {
+            let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmed.isEmpty { return String(trimmed.prefix(120)) }
+        }
+        if let prompt = obj["prompt"] as? String {
+            let trimmed = prompt
+                .replacingOccurrences(of: "\n", with: " ")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmed.isEmpty { return String(trimmed.prefix(48)) }
+        }
+        return nil
+    }
+
+    private static func extractToolDetail(from body: Data) -> String? {
+        guard let obj = try? JSONSerialization.jsonObject(with: body) as? [String: Any] else { return nil }
+        if let detail = obj["tool_detail"] as? String {
+            let trimmed = detail.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmed.isEmpty { return String(trimmed.prefix(160)) }
+        }
+        let tool = (obj["tool_name"] as? String)?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        var hint: String?
+        if let ti = obj["tool_input"] as? [String: Any] {
+            hint = (ti["command"] as? String)
+                ?? (ti["file_path"] as? String)
+                ?? (ti["path"] as? String)
+                ?? (ti["description"] as? String)
+        }
+        hint = hint?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let tool, !tool.isEmpty, let hint, !hint.isEmpty {
+            return String("\(tool) \(hint)".prefix(160))
+        }
+        if let tool, !tool.isEmpty { return String(tool.prefix(40)) }
+        if let hint, !hint.isEmpty { return String(hint.prefix(160)) }
+        return nil
     }
 
     func approvePending() {
